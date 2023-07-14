@@ -23,11 +23,7 @@ macro_rules! measure {
         let start = Instant::now();
         let result = $fun;
         let elapsed = start.elapsed();
-        println!(
-            "{} execution time: {}ms",
-            stringify!($fun),
-            elapsed.as_millis()
-        );
+        println!("Operation took {}ms.", elapsed.as_millis());
         result
     }};
 }
