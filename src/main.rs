@@ -1,4 +1,3 @@
-#![allow(unused)]
 use std::env;
 
 mod huffman;
@@ -7,13 +6,14 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 3 {
-        println!("Not enought arguments.");
+        println!("Not enough arguments.");
         print_usage_message();
         return;
     }
 
     match args[1].as_str() {
         "c" => {
+            // Compress the file.
             measure!({
                 println!("Compressing '{}'...", args[2]);
                 huffman::compress(&args[2]);
@@ -21,6 +21,7 @@ fn main() {
             });
         }
         "d" => {
+            // Decompress the file.
             if args[2].ends_with(".hzip") {
                 measure!({
                     println!("Decompressing '{}'...", args[2]);
@@ -36,7 +37,7 @@ fn main() {
             }
         }
         _ => {
-            println!("Unkwon usage.");
+            println!("Unknown usage.");
             print_usage_message();
         }
     }

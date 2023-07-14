@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error};
+use std::collections::HashMap;
 
 use bitvec::vec::BitVec;
 use trees::Tree;
