@@ -96,10 +96,12 @@ fn write_to_file(path: &str, data: &Vec<u8>, map: EncodingMap) {
 
     let map_string = encoding_map_to_string(map);
     let map_string_len = map_string.len().to_le_bytes();
+    let data_len = data.len().to_le_bytes();
 
     fs::write(
         path.to_owned() + ".hzip",
         [
+            &data_len,
             &map_string_len,
             map_string.as_bytes(),
             contents.as_raw_slice(),

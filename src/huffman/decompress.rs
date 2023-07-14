@@ -5,14 +5,25 @@ use super::*;
 pub fn decompress(path: &str) {
     let data = fs::read(path).expect("failed to read from input file");
 
-    let (map, data) = parse_file(data);
-    let contents = decode_data(map, data);
+    let (map, data, data_len) = parse_file(data);
+    let mut contents = decode_data(map, data);
+
+    while contents.len() > data_len {
+        contents.pop();
+    }
 
     let decoded_path = path.replace(".hzip", "");
     fs::write(decoded_path, contents);
 }
 
-fn parse_file(data: Vec<u8>) -> (DecodingMap, Vec<u8>) {
+fn parse_file(data: Vec<u8>) -> (DecodingMap, Vec<u8>, usize) {
+    let (raw_data_len, data) = data.split_at(8);
+    let data_len = usize::from_le_bytes(
+        raw_data_len
+            .try_into()
+            .expect("data length slice with incorrect lentgh"),
+    );
+
     let (raw_map_size, data) = data.split_at(8);
     let map_size = usize::from_le_bytes(
         raw_map_size
@@ -23,7 +34,7 @@ fn parse_file(data: Vec<u8>) -> (DecodingMap, Vec<u8>) {
     let (raw_map, data) = data.split_at(map_size);
     let map = parse_map(raw_map);
 
-    (map, data.to_vec())
+    (map, data.to_vec(), data_len)
 }
 
 fn parse_map(raw_map: &[u8]) -> DecodingMap {
