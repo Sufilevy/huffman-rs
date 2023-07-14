@@ -1,0 +1,2 @@
+this is a file that needs to be compressed.
+We Need To Compress It!
