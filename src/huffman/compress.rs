@@ -5,21 +5,19 @@ use trees::Tree;
 
 use super::*;
 
-pub fn compress(path: &str) -> EmptyResult {
-    let data = fs::read(path)?;
+pub fn compress(path: &str) {
+    let data = fs::read(path).expect("failed to read from input file");
 
     let char_map = create_char_map(&data);
     if char_map.is_empty() {
-        return Ok(());
+        println!("The input file is empty.");
+        return;
     }
 
     let char_tree = create_char_tree(char_map);
-
     let encoding_map = create_encoding_map(char_tree);
 
-    write_to_file(path, &data, encoding_map)?;
-
-    Ok(())
+    write_to_file(path, &data, encoding_map);
 }
 
 fn create_char_map(data: &Vec<u8>) -> CharMap {
@@ -42,10 +40,10 @@ fn create_char_tree(count_map: CharMap) -> CharTree {
     while queue.len() > 1 {
         let first = queue
             .pop()
-            .expect("The priority queue was empty on first pop");
+            .expect("the priority queue was empty on first pop");
         let second = queue
             .pop()
-            .expect("The priority queue was empty on second pop");
+            .expect("the priority queue was empty on second pop");
 
         let mut new_node = Tree::new(0);
         new_node.push_back(first.0);
@@ -55,7 +53,7 @@ fn create_char_tree(count_map: CharMap) -> CharTree {
 
     queue
         .pop()
-        .expect("The priority queue was empty on last pop")
+        .expect("the priority queue was empty on last pop")
         .0
 }
 
@@ -88,22 +86,27 @@ fn rec_create_encoding_map(mut tree: CharTree, mut encoding: EncodingVec) -> Enc
     }
 }
 
-fn write_to_file(path: &str, data: &Vec<u8>, map: EncodingMap) -> EmptyResult {
+fn write_to_file(path: &str, data: &Vec<u8>, map: EncodingMap) {
     let mut contents = EncodingVec::new();
 
     for char in data {
-        let mut encoded = map.get(char).expect("Missing encoding for char").clone();
+        let mut encoded = map.get(char).expect("missing encoding for char").clone();
         contents.append(&mut encoded);
     }
 
     let map_string = encoding_map_to_string(map);
+    let map_string_len = map_string.len().to_le_bytes();
 
     fs::write(
         path.to_owned() + ".hzip",
-        [map_string.as_bytes(), contents.as_raw_slice()].concat(),
-    )?;
-
-    Ok(())
+        [
+            &map_string_len,
+            map_string.as_bytes(),
+            contents.as_raw_slice(),
+        ]
+        .concat(),
+    )
+    .expect("failed to write to output file");
 }
 
 fn encoding_map_to_string(map: EncodingMap) -> String {
@@ -114,17 +117,9 @@ fn encoding_map_to_string(map: EncodingMap) -> String {
             .iter()
             .map(|b| if *b { "1" } else { "0" })
             .collect();
-        string += &format!("{},{}|", char as char, encoding_str);
+        string += &format!("{}{}\0", char as char, encoding_str);
     }
-
-    let len_str: String = string
-        .len()
-        .to_le_bytes()
-        .map(|b| b as char)
-        .iter()
-        .collect();
-
-    string.insert_str(0, &len_str);
+    string.pop();
 
     string
 }

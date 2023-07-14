@@ -7,14 +7,14 @@ mod compress;
 mod decompress;
 
 pub use compress::compress;
+pub use decompress::decompress;
 
-type Result<T> = std::result::Result<T, Box<dyn Error>>;
-pub type EmptyResult = Result<()>;
-
-type CharMap = HashMap<u8, i32>;
+type CharMap = HashMap<u8, i64>;
 type CharTree = Tree<u8>;
 type EncodingVec = BitVec<u8>;
 type EncodingMap = HashMap<u8, EncodingVec>;
+
+type DecodingMap = HashMap<EncodingVec, u8>;
 
 #[macro_export]
 macro_rules! measure {
