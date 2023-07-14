@@ -1,9 +1,13 @@
 #![allow(unused)]
 
+use std::env::{self, args};
+
 mod huffman;
 
 fn main() {
-    measure!({ huffman::compress("input/input4.txt") });
+    let args: Vec<String> = env::args().collect();
+    let input = format!("input/input{}.txt", args[1].parse::<u32>().unwrap());
+    measure!({ huffman::compress(&input) });
 }
 
 #[macro_export]
