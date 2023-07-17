@@ -21,24 +21,24 @@ pub fn decompress(path: &str) {
 
 fn parse_file(data: Vec<u8>) -> (DecodingMap, Vec<u8>, usize) {
     // Get the data length from the start of the file.
-    let (raw_data_len, data) = data.split_at(8);
+    let (data_len, data) = data.split_at(8);
     let data_len = usize::from_le_bytes(
-        raw_data_len
+        data_len
             .try_into()
             .expect("data length slice with incorrect length"),
     );
 
     // Get the map size from the start of the file.
-    let (raw_map_size, data) = data.split_at(8);
+    let (map_size, data) = data.split_at(8);
     let map_size = usize::from_le_bytes(
-        raw_map_size
+        map_size
             .try_into()
             .expect("map size slice with incorrect length"),
     );
 
     // Read and parse the map from the file.
-    let (raw_map, data) = data.split_at(map_size);
-    let map = parse_map(raw_map);
+    let (map, data) = data.split_at(map_size);
+    let map = parse_map(map);
 
     (map, data.to_vec(), data_len)
 }
@@ -75,8 +75,8 @@ fn decode_data(map: DecodingMap, data: Vec<u8>) -> Vec<u8> {
     for bit in bits {
         current_bits.push(bit);
 
-        if let Some(char) = map.get(&current_bits) {
-            decoded.push(*char);
+        if let Some(&char) = map.get(&current_bits) {
+            decoded.push(char);
             current_bits.clear();
         }
     }
