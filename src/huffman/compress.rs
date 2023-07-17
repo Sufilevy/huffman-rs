@@ -25,7 +25,7 @@ pub fn compress(path: &str) {
 
     // Encoding the file and writing the results to disk.
     let contents = encode_data(&data, &encoding_map);
-    write_to_file(path, &contents, encoding_map);
+    write_to_file(path, encoding_map, &contents, data.len());
 }
 
 fn create_char_map(data: &[u8]) -> CharMap {
@@ -115,17 +115,16 @@ fn encode_data(data: &[u8], map: &EncodingMap) -> EncodingVec {
     contents
 }
 
-fn write_to_file(path: &str, contents: &EncodingVec, map: EncodingMap) {
+fn write_to_file(path: &str, map: EncodingMap, contents: &EncodingVec, contents_len: usize) {
     let map_string = encoding_map_to_string(map);
     let map_string_len = map_string.len().to_le_bytes();
-    let contents_len = contents.len().to_le_bytes();
 
     // Write the encoded data to the file, together with the data length,
     // the encoding map length, and the encoding map itself.
     fs::write(
         path.to_owned() + ".hzip",
         [
-            &contents_len,
+            &contents_len.to_le_bytes(),
             &map_string_len,
             map_string.as_bytes(),
             contents.as_raw_slice(),
