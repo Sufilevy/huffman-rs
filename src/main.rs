@@ -18,8 +18,9 @@ fn main() {
             // Compress the file.
             measure! {
                 println!("Compressing '{}'...", args[2]);
-                huffman::compress(&args[2]);
-                println!("Compressed file saved to '{}.hzip'.", args[2]);
+                if huffman::compress(&args[2]) {
+                    println!("Compressed file saved to '{}.hzip'.", args[2]);
+                }
             };
         }
         "d" => {

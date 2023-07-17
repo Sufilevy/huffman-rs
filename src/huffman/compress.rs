@@ -6,14 +6,14 @@ use trees::Tree;
 
 use super::*;
 
-pub fn compress(path: &str) {
+pub fn compress(path: &str) -> bool {
     let data = fs::read(path).expect("failed to read from input file");
 
     // Creating the char map, containing the number of occurrences of each char in the file.
     let char_map = create_char_map(&data);
     if char_map.is_empty() {
         println!("The input file is empty.");
-        return;
+        return false;
     }
 
     // Creating the char tree, describing how each char should be encoded
@@ -26,6 +26,8 @@ pub fn compress(path: &str) {
     // Encoding the file and writing the results to disk.
     let contents = encode_data(&data, &encoding_map);
     write_to_file(path, encoding_map, &contents, data.len());
+
+    true
 }
 
 fn create_char_map(data: &[u8]) -> CharMap {
