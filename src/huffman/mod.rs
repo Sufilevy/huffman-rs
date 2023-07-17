@@ -16,14 +16,15 @@ type EncodingMap = HashMap<u8, EncodingVec>;
 
 type DecodingMap = HashMap<EncodingVec, u8>;
 
-#[macro_export]
 macro_rules! measure {
-    ($fun:block) => {{
+    ($($tokens:tt)*) => {{
         use std::time::Instant;
         let start = Instant::now();
-        let result = $fun;
+        let result = { $($tokens)* };
         let elapsed = start.elapsed();
         println!("Operation took {}ms.", elapsed.as_millis());
         result
     }};
 }
+
+pub(crate) use measure;

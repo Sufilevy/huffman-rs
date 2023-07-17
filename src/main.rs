@@ -1,5 +1,7 @@
 use std::env;
 
+use crate::huffman::measure;
+
 mod huffman;
 
 fn main() {
@@ -14,23 +16,23 @@ fn main() {
     match args[1].as_str() {
         "c" => {
             // Compress the file.
-            measure!({
+            measure! {
                 println!("Compressing '{}'...", args[2]);
                 huffman::compress(&args[2]);
                 println!("Compressed file saved to '{}.hzip'.", args[2]);
-            });
+            };
         }
         "d" => {
             // Decompress the file.
             if args[2].ends_with(".hzip") {
-                measure!({
+                measure! {
                     println!("Decompressing '{}'...", args[2]);
                     huffman::decompress(&args[2]);
                     println!(
                         "Decompressed file saved to '{}'.",
                         args[2].replace(".hzip", "")
                     );
-                });
+                }
             } else {
                 println!("Not an hzipped file.");
                 print_usage_message();
