@@ -106,8 +106,10 @@ fn encode_data(data: &[u8], map: &EncodingMap) -> EncodingVec {
     let mut contents = EncodingVec::new();
 
     for char in data {
-        let encoded = map.get(char).expect("missing encoding for char");
-        contents.extend(encoded);
+        match map.get(char) {
+            Some(encoded) => contents.extend(encoded),
+            None => panic!("missing encoding for char"),
+        }
     }
 
     contents
