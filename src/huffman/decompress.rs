@@ -75,8 +75,8 @@ fn decode_data(map: DecodingMap, data: Vec<u8>) -> Vec<u8> {
     for bit in bits {
         current_bits.push(bit);
 
-        if let Some(&char) = map.get(&current_bits) {
-            decoded.push(char);
+        if let Some(char) = map.get(&current_bits) {
+            decoded.push(*char);
             current_bits.clear();
         }
     }

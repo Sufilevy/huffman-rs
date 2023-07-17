@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use ahash::AHashMap;
 use bitvec::vec::BitVec;
 use trees::Tree;
 
@@ -14,7 +15,7 @@ type CharTree = Tree<u8>;
 type EncodingVec = BitVec<u8>;
 type EncodingMap = HashMap<u8, EncodingVec>;
 
-type DecodingMap = HashMap<EncodingVec, u8>;
+type DecodingMap = AHashMap<EncodingVec, u8>;
 
 macro_rules! measure {
     ($($tokens:tt)*) => {{
