@@ -1,5 +1,6 @@
 use bitvec::vec::BitVec;
 use priority_queue::PriorityQueue;
+use rayon::prelude::*;
 use std::{collections::HashMap, fs};
 use trees::Tree;
 
@@ -9,7 +10,7 @@ pub fn compress(path: &str) {
     let data = fs::read(path).expect("failed to read from input file");
 
     // Creating the char map, containing the number of occurrences of each char in the file.
-    let char_map = create_char_map(&data);
+    let char_map = measure! {create_char_map(&data)};
     if char_map.is_empty() {
         println!("The input file is empty.");
         return;
@@ -23,19 +24,22 @@ pub fn compress(path: &str) {
     let encoding_map = create_encoding_map(char_tree);
 
     // Encoding the file and writing the results to disk.
-    write_to_file(path, &data, encoding_map);
+    let contents = encode_data(&data, &encoding_map);
+    write_to_file(path, &contents, encoding_map);
 }
 
-fn create_char_map(data: &Vec<u8>) -> CharMap {
-    let mut map = CharMap::new();
-
-    // Count the number of occurrences of each char in the file.
-    for &char in data {
-        let count = map.entry(char).or_insert(-1);
-        *count -= 1;
-    }
-
-    map
+fn create_char_map(data: &[u8]) -> CharMap {
+    data.par_chunks(1_000_000)
+        .flat_map(|chunk| {
+            // Count the number of occurrences of each char in the chunk.
+            let mut map = CharMap::new();
+            for &char in chunk {
+                let count = map.entry(char).or_insert(-1);
+                *count -= 1;
+            }
+            map
+        })
+        .collect()
 }
 
 fn create_char_tree(count_map: CharMap) -> CharTree {
@@ -98,25 +102,28 @@ fn rec_create_encoding_map(mut tree: CharTree, mut encoding: EncodingVec) -> Enc
     }
 }
 
-fn write_to_file(path: &str, data: &Vec<u8>, map: EncodingMap) {
+fn encode_data(data: &[u8], map: &EncodingMap) -> EncodingVec {
     let mut contents = EncodingVec::new();
 
-    // Encode the data.
     for char in data {
-        let mut encoded = map.get(char).expect("missing encoding for char").clone();
-        contents.append(&mut encoded);
+        let encoded = map.get(char).expect("missing encoding for char");
+        contents.extend(encoded);
     }
 
+    contents
+}
+
+fn write_to_file(path: &str, contents: &EncodingVec, map: EncodingMap) {
     let map_string = encoding_map_to_string(map);
     let map_string_len = map_string.len().to_le_bytes();
-    let data_len = data.len().to_le_bytes();
+    let contents_len = contents.len().to_le_bytes();
 
     // Write the encoded data to the file, together with the data length,
     // the encoding map length, and the encoding map itself.
     fs::write(
         path.to_owned() + ".hzip",
         [
-            &data_len,
+            &contents_len,
             &map_string_len,
             map_string.as_bytes(),
             contents.as_raw_slice(),
