@@ -10,7 +10,7 @@ pub fn compress(path: &str) {
     let data = fs::read(path).expect("failed to read from input file");
 
     // Creating the char map, containing the number of occurrences of each char in the file.
-    let char_map = measure! {create_char_map(&data)};
+    let char_map = create_char_map(&data);
     if char_map.is_empty() {
         println!("The input file is empty.");
         return;
