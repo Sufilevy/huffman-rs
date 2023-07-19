@@ -9,21 +9,21 @@ use super::*;
 pub fn compress(path: &str) -> bool {
     let data = fs::read(path).expect("failed to read from input file");
 
-    // Creating the char map, containing the number of occurrences of each char in the file.
+    // Create the char map, containing the number of occurrences of each char in the file.
     let char_map = create_char_map(&data);
     if char_map.is_empty() {
         println!("The input file is empty.");
         return false;
     }
 
-    // Creating the char tree, describing how each char should be encoded
+    // Create the char tree, describing how each char should be encoded
     // by choosing the shortest encoded string for the most used chars.
     let char_tree = create_char_tree(char_map);
 
-    // Creating the encoding map, containing the encoded strings of each char in the file.
+    // Create the encoding map, containing the encoded strings of each char in the file.
     let encoding_map = create_encoding_map(char_tree);
 
-    // Encoding the file and writing the results to disk.
+    // Encode the file and write the results to disk.
     let contents = encode_data(&data, &encoding_map);
     write_to_file(path, encoding_map, &contents, data.len());
 
@@ -119,15 +119,14 @@ fn encode_data(data: &[u8], map: &EncodingMap) -> EncodingVec {
 
 fn write_to_file(path: &str, map: EncodingMap, contents: &EncodingVec, contents_len: usize) {
     let map_string = encoding_map_to_string(map);
-    let map_string_len = map_string.len().to_le_bytes();
 
-    // Write the encoded data to the file, together with the data length,
-    // the encoding map length, and the encoding map itself.
+    // Write the encoded data to the file, along with the data length,
+    // the encoding map, and the encoding map length.
     fs::write(
         path.to_owned() + ".hzip",
         [
             &contents_len.to_le_bytes(),
-            &map_string_len,
+            &map_string.len().to_le_bytes(),
             map_string.as_bytes(),
             contents.as_raw_slice(),
         ]
