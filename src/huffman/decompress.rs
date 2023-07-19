@@ -70,14 +70,46 @@ fn decode_data(map: DecodingMap, data: Vec<u8>) -> Vec<u8> {
     let bits = EncodingVec::from_vec(data);
     let mut current_bits = EncodingVec::new();
 
-    // For each bit in the file, add it to a bit buffer. If it matches an
-    // encoding-string, turn it into the corresponding char and clear the bit buffer.
-    for bit in bits {
-        current_bits.push(bit);
+    // Get the char with the shortest encode.
+    let (shortest_encode, &shortest_char) = map
+        .iter()
+        .min_by_key(|(k, _)| k.len())
+        .expect("map encoding is empty");
+    let shortest_encode_len = shortest_encode.len();
 
-        if let Some(char) = map.get(&current_bits) {
-            decoded.push(*char);
-            current_bits.clear();
+    // If the shortest encode is only 1 bit, we can save some time by checking
+    // if the current bit is 1 when we start reading a new encode. Because of the
+    // way the binary-tree construction works in the compression, we know that if
+    // the shortest encode is 1 bit it has to be the value 1.
+    if shortest_encode_len == 1 {
+        // For each bit in the file, add it to a bit buffer. If it matches an
+        // encode, turn it into the corresponding char and clear the bit buffer.
+        for bit in bits {
+            if current_bits.is_empty() && bit {
+                decoded.push(shortest_char);
+                continue;
+            }
+
+            current_bits.push(bit);
+
+            if let Some(char) = map.get(&current_bits) {
+                decoded.push(*char);
+                current_bits.clear();
+            }
+        }
+    } else {
+        // For each bit in the file, add it to a bit buffer. If it matches an
+        // encode, turn it into the corresponding char and clear the bit buffer.
+        for bit in bits {
+            current_bits.push(bit);
+
+            // Check if the current bits match an encode only if the current bits buffer is long enough.
+            if current_bits.len() >= shortest_encode_len {
+                if let Some(char) = map.get(&current_bits) {
+                    decoded.push(*char);
+                    current_bits.clear();
+                }
+            }
         }
     }
 
