@@ -1,5 +1,5 @@
 [package]
-name = "huffman-rs"
+name = "huffman"
 version = "0.1.0"
 edition = "2021"
 
