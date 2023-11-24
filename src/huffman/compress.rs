@@ -1,33 +1,37 @@
+use anyhow::{anyhow, Context};
 use bitvec::vec::BitVec;
 use priority_queue::PriorityQueue;
 use rayon::prelude::*;
 use std::{collections::HashMap, fs};
 use trees::Tree;
 
-use super::*;
+use super::EncodingVec;
 
-pub fn compress(path: &str) -> bool {
-    let data = fs::read(path).expect("failed to read from input file");
+type CharMap = HashMap<u8, i64>;
+type CharTree = Tree<u8>;
+type EncodingMap = HashMap<u8, EncodingVec>;
+
+pub fn compress(path: &str) -> anyhow::Result<()> {
+    let data = fs::read(path).context("failed to read from input file")?;
+    if data.is_empty() {
+        return Err(anyhow!("the input file is empty"));
+    }
 
     // Create the char map, containing the number of occurrences of each char in the file.
     let char_map = create_char_map(&data);
-    if char_map.is_empty() {
-        println!("The input file is empty.");
-        return false;
-    }
 
     // Create the char tree, describing how each char should be encoded
     // by choosing the shortest encoded string for the most used chars.
-    let char_tree = create_char_tree(char_map);
+    let char_tree = create_char_tree(char_map)?;
 
     // Create the encoding map, containing the encoded strings of each char in the file.
     let encoding_map = create_encoding_map(char_tree);
 
     // Encode the file and write the results to disk.
-    let contents = encode_data(&data, &encoding_map);
-    write_to_file(path, encoding_map, &contents, data.len());
+    let contents = encode_data(&data, &encoding_map)?;
+    write_to_file(path, encoding_map, &contents, data.len())?;
 
-    true
+    Ok(())
 }
 
 fn create_char_map(data: &[u8]) -> CharMap {
@@ -44,7 +48,7 @@ fn create_char_map(data: &[u8]) -> CharMap {
         .collect()
 }
 
-fn create_char_tree(count_map: CharMap) -> CharTree {
+fn create_char_tree(count_map: CharMap) -> anyhow::Result<CharTree> {
     // Create the initial tree, with all of the chars in a tree
     // with the priority as the number of occurrences.
     let mut queue = PriorityQueue::new();
@@ -58,10 +62,10 @@ fn create_char_tree(count_map: CharMap) -> CharTree {
     while queue.len() > 1 {
         let first = queue
             .pop()
-            .expect("the priority queue was empty on first pop");
+            .context("the priority queue was empty on first pop")?;
         let second = queue
             .pop()
-            .expect("the priority queue was empty on second pop");
+            .context("the priority queue was empty on second pop")?;
 
         let mut new_node = Tree::new(0);
         new_node.push_back(first.0);
@@ -70,10 +74,12 @@ fn create_char_tree(count_map: CharMap) -> CharTree {
     }
 
     // Pop the last element in the queue, which should be the root of the tree.
-    queue
+    let root = queue
         .pop()
-        .expect("the priority queue was empty on last pop")
-        .0
+        .context("the priority queue was empty on last pop")?
+        .0;
+
+    Ok(root)
 }
 
 fn create_encoding_map(tree: CharTree) -> EncodingMap {
@@ -104,20 +110,25 @@ fn rec_create_encoding_map(mut tree: CharTree, mut encoding: EncodingVec) -> Enc
     }
 }
 
-fn encode_data(data: &[u8], map: &EncodingMap) -> EncodingVec {
+fn encode_data(data: &[u8], map: &EncodingMap) -> anyhow::Result<EncodingVec> {
     let mut contents = EncodingVec::new();
 
     for char in data {
         match map.get(char) {
             Some(encoded) => contents.extend(encoded),
-            None => panic!("missing encoding for char"),
+            None => return Err(anyhow!("missing encoding for char")),
         }
     }
 
-    contents
+    Ok(contents)
 }
 
-fn write_to_file(path: &str, map: EncodingMap, contents: &EncodingVec, contents_len: usize) {
+fn write_to_file(
+    path: &str,
+    map: EncodingMap,
+    contents: &EncodingVec,
+    contents_len: usize,
+) -> anyhow::Result<()> {
     let map_string = encoding_map_to_string(map);
 
     // Write the encoded data to the file, along with the data length,
@@ -132,7 +143,9 @@ fn write_to_file(path: &str, map: EncodingMap, contents: &EncodingVec, contents_
         ]
         .concat(),
     )
-    .expect("failed to write to output file");
+    .context("failed to write to output file")?;
+
+    Ok(())
 }
 
 fn encoding_map_to_string(map: EncodingMap) -> String {

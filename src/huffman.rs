@@ -1,21 +1,14 @@
-use std::collections::HashMap;
-
-use ahash::AHashMap;
 use bitvec::vec::BitVec;
-use trees::Tree;
 
+mod cli;
 mod compress;
 mod decompress;
 
-pub use compress::compress;
-pub use decompress::decompress;
+pub use cli::run_cli;
+use compress::compress;
+use decompress::decompress;
 
-type CharMap = HashMap<u8, i64>;
-type CharTree = Tree<u8>;
 type EncodingVec = BitVec<u8>;
-type EncodingMap = HashMap<u8, EncodingVec>;
-
-type DecodingMap = AHashMap<EncodingVec, u8>;
 
 macro_rules! measure {
     ($($tokens:tt)*) => {{
@@ -28,4 +21,4 @@ macro_rules! measure {
     }};
 }
 
-pub(crate) use measure;
+use measure;
