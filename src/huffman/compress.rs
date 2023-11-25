@@ -7,8 +7,7 @@ use trees::Tree;
 
 use super::EncodingVec;
 
-type CharMap = HashMap<u8, i64>;
-type CharTree = Tree<u8>;
+type BytesCountMap = HashMap<u8, u64>;
 type EncodingMap = HashMap<u8, EncodingVec>;
 
 pub fn compress(path: &str) -> anyhow::Result<()> {
@@ -34,31 +33,32 @@ pub fn compress(path: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn create_char_map(data: &[u8]) -> CharMap {
+fn create_char_map(data: &[u8]) -> BytesCountMap {
     data.par_chunks(1_000_000)
         .flat_map(|chunk| {
             // Count the number of occurrences of each char in the chunk.
-            let mut map = CharMap::new();
+            let mut map = BytesCountMap::new();
             for &char in chunk {
-                let count = map.entry(char).or_insert(-1);
-                *count -= 1;
+                let count = map.entry(char).or_insert(0); // The counting is done in negative numbers to
+                *count += 1;
             }
             map
         })
         .collect()
 }
 
-fn create_char_tree(count_map: CharMap) -> anyhow::Result<CharTree> {
+fn create_char_tree(count_map: BytesCountMap) -> anyhow::Result<Tree<u8>> {
     // Create the initial tree, with all of the chars in a tree
     // with the priority as the number of occurrences.
     let mut queue = PriorityQueue::new();
     for (char, count) in count_map {
-        queue.push(Tree::new(char), count);
+        // The queue should put the byte with the most occurrences first (hence the u64::MAX - count).
+        queue.push(Tree::new(char), u64::MAX - count);
     }
 
-    // While there are nodes in the queue, get the nodes with the most
-    // priority and make them the children of a new node. Then add that node
-    // to the queue with the priority of both child nodes combined.
+    // While there are nodes in the queue, get the nodes with the most priority
+    // (most occurrences) and make them the children of a new node. Then add
+    // that node to the queue with the priority of both children nodes combined.
     while queue.len() > 1 {
         let first = queue
             .pop()
@@ -82,12 +82,12 @@ fn create_char_tree(count_map: CharMap) -> anyhow::Result<CharTree> {
     Ok(root)
 }
 
-fn create_encoding_map(tree: CharTree) -> EncodingMap {
+fn create_encoding_map(tree: Tree<u8>) -> EncodingMap {
     // Create the encoding map recursively.
     rec_create_encoding_map(tree, BitVec::new())
 }
 
-fn rec_create_encoding_map(mut tree: CharTree, mut encoding: EncodingVec) -> EncodingMap {
+fn rec_create_encoding_map(mut tree: Tree<u8>, mut encoding: EncodingVec) -> EncodingMap {
     // If this is not a leaf node, pop it's left and right children and continue creating the map from them.
     if let Some(left) = tree.pop_front() {
         encoding.push(false);
@@ -129,7 +129,7 @@ fn write_to_file(
     contents: &EncodingVec,
     contents_len: usize,
 ) -> anyhow::Result<()> {
-    let map_string = encoding_map_to_string(map);
+    let map_string = encoding_map_to_bytes(map);
 
     // Write the encoded data to the file, along with the data length,
     // the encoding map, and the encoding map length.
@@ -138,7 +138,7 @@ fn write_to_file(
         [
             &contents_len.to_le_bytes(),
             &map_string.len().to_le_bytes(),
-            map_string.as_bytes(),
+            &map_string[..],
             contents.as_raw_slice(),
         ]
         .concat(),
@@ -148,18 +148,20 @@ fn write_to_file(
     Ok(())
 }
 
-fn encoding_map_to_string(map: EncodingMap) -> String {
-    let mut string = String::new();
+fn encoding_map_to_bytes(map: EncodingMap) -> Vec<u8> {
+    let mut bytes = Vec::new();
 
     // Convert the encoding map to a string, using \0 as the separator.
     for (char, encoding) in map {
-        let encoding_str: String = encoding
+        let encoding_bytes: Vec<u8> = encoding
             .iter()
-            .map(|b| if *b { "1" } else { "0" })
+            .map(|b| if *b { b'1' } else { b'0' })
             .collect();
-        string += &format!("{}{}\0", char as char, encoding_str);
+        bytes.push(char);
+        bytes.extend(encoding_bytes.iter());
+        bytes.push(b'\0')
     }
-    string.pop();
+    bytes.pop();
 
-    string
+    bytes
 }

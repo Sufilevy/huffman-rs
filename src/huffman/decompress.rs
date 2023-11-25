@@ -51,20 +51,15 @@ fn parse_file(data: Vec<u8>) -> anyhow::Result<(DecodingMap, Vec<u8>, usize)> {
     Ok((map, data.to_vec(), data_len))
 }
 
-fn parse_map(raw_map: &[u8]) -> anyhow::Result<DecodingMap> {
-    // Convert the raw map to a string.
-    let map_str =
-        String::from_utf8(raw_map.to_vec()).context("failed to convert map bytes to String")?;
-
+fn parse_map(map: &[u8]) -> anyhow::Result<DecodingMap> {
     // For each entry (separated by \0) read the char and the encoding vec and add it to the map.
-    map_str
-        .split('\0')
-        .map(|entry_str| {
-            let mut chars = entry_str.chars();
-            match chars.next() {
+    map.split(|it| *it == b'\0')
+        .map(|entry_bytes| {
+            let mut bytes_iter = entry_bytes.iter();
+            match bytes_iter.next() {
                 Some(char) => {
-                    let encoding_vec = encoding_vec_from_string(chars.as_str());
-                    Ok((encoding_vec, char as u8))
+                    let encoding_vec = encoding_vec_from_string(bytes_iter.as_slice());
+                    Ok((encoding_vec, *char))
                 }
                 None => Err(anyhow!("an encoding map entry was empty")),
             }
@@ -72,8 +67,8 @@ fn parse_map(raw_map: &[u8]) -> anyhow::Result<DecodingMap> {
         .collect()
 }
 
-fn encoding_vec_from_string(string: &str) -> EncodingVec {
-    string.chars().map(|c| c == '1').collect()
+fn encoding_vec_from_string(string: &[u8]) -> EncodingVec {
+    string.iter().map(|c| *c == b'1').collect()
 }
 
 fn decode_data(map: DecodingMap, data: Vec<u8>) -> anyhow::Result<Vec<u8>> {
